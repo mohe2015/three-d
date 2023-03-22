@@ -2,7 +2,7 @@
 use crate::control::*;
 use crate::core::{Context, CoreError, Viewport};
 use winit::event::{Event, TouchPhase, WindowEvent};
-use winit::event_loop::{ControlFlow, EventLoop};
+use winit::event_loop::{ControlFlow, EventLoop, EventLoopWindowTarget};
 use winit::window::WindowBuilder;
 use winit::*;
 
@@ -64,9 +64,8 @@ pub enum WindowError {
 /// Window and event handling.
 /// Use [Window::new] to create a new window or [Window::from_winit_window] which provides full control over the creation of the window.
 ///
-pub struct Window<T: 'static + Clone> {
+pub struct Window {
     window: winit::window::Window,
-    event_loop: EventLoop<T>,
     #[cfg(target_arch = "wasm32")]
     closure: wasm_bindgen::closure::Closure<dyn FnMut(web_sys::Event)>,
     gl: WindowedContext,
@@ -74,25 +73,23 @@ pub struct Window<T: 'static + Clone> {
     maximized: bool,
 }
 
-impl Window<()> {
+impl Window {
     ///
     /// Constructs a new Window with the given [settings].
     ///
     ///
     /// [settings]: WindowSettings
-    pub fn new(window_settings: WindowSettings) -> Result<Window<()>, WindowError> {
+    pub fn new(window_settings: WindowSettings) -> Result<Window, WindowError> {
         Self::from_event_loop(window_settings, EventLoop::new())
     }
-}
 
-impl<T: 'static + Clone> Window<T> {
     /// Exactly the same as [`Window::new()`] except with the ability to supply
     /// an existing [`EventLoop`]. Use the event loop's [proxy] to push custom
     /// events into the render loop (from any thread). Not available for web.
     ///
     /// [proxy]: winit::event_loop::EventLoopProxy
     #[cfg(not(target_arch = "wasm32"))]
-    pub fn from_event_loop(
+    pub fn from_event_loop<T: 'static + Clone>(
         window_settings: WindowSettings,
         event_loop: EventLoop<T>,
     ) -> Result<Self, WindowError> {
@@ -120,7 +117,6 @@ impl<T: 'static + Clone> Window<T> {
         .build(&event_loop)?;
         Self::from_winit_window(
             winit_window,
-            event_loop,
             window_settings.surface_settings,
             window_settings.max_size.is_none(),
         )
@@ -132,7 +128,7 @@ impl<T: 'static + Clone> Window<T> {
     ///
     /// [proxy]: winit::event_loop::EventLoopProxy
     #[cfg(target_arch = "wasm32")]
-    pub fn from_event_loop(
+    pub fn from_event_loop<T: 'static + Clone>(
         window_settings: WindowSettings,
         event_loop: EventLoop<T>,
     ) -> Result<Self, WindowError> {
@@ -193,7 +189,7 @@ impl<T: 'static + Clone> Window<T> {
     /// control over the creation of the window.
     /// This method takes ownership of the winit window and event loop, if this is not desired, use a [WindowedContext] or [HeadlessContext](crate::HeadlessContext) instead.
     ///
-    pub fn from_winit_window(
+    pub fn from_winit_window<T: 'static + Clone>(
         winit_window: window::Window,
         event_loop: EventLoop<T>,
         mut surface_settings: SurfaceSettings,
@@ -222,7 +218,6 @@ impl<T: 'static + Clone> Window<T> {
 
         Ok(Self {
             window: winit_window,
-            event_loop,
             gl: gl?,
             #[cfg(target_arch = "wasm32")]
             closure,
@@ -233,7 +228,14 @@ impl<T: 'static + Clone> Window<T> {
     ///
     /// Start the main render loop which calls the `callback` closure each frame.
     ///
-    pub fn render_loop<F: 'static + FnMut(FrameInput<T>) -> FrameOutput>(self, mut callback: F) {
+    pub fn render_loop<T: 'static + Clone, F: 'static + FnMut(FrameInput<T>) -> FrameOutput>(self, mut callback: F, event_loop: EventLoop<T>) {
+        event_loop.run(self.get_render_loop_impl(callback))
+    }
+
+    ///
+    /// Start the main render loop which calls the `callback` closure each frame.
+    ///
+    pub fn get_render_loop_impl<T: 'static + Clone, F: 'static + FnMut(FrameInput<T>) -> FrameOutput>(self, mut callback: F) -> impl FnMut(Event<'_, T>, &EventLoopWindowTarget<T>, &mut ControlFlow) {
         #[cfg(not(target_arch = "wasm32"))]
         let mut last_time = std::time::Instant::now();
         #[cfg(target_arch = "wasm32")]
@@ -248,7 +250,13 @@ impl<T: 'static + Clone> Window<T> {
         let mut modifiers = Modifiers::default();
         let mut first_frame = true;
         let mut mouse_pressed = None;
-        self.event_loop.run(move |event, _, control_flow| {
+
+        // https://docs.rs/winit/latest/winit/index.html
+        // https://docs.rs/winit/latest/winit/event/index.html
+        // https://docs.rs/winit/latest/winit/event/enum.Event.html
+        // https://github.com/rust-windowing/winit/blob/master/examples/multiwindow.rs
+
+        move |event, _, control_flow: &mut ControlFlow| {
             match event {
                 Event::UserEvent(t) => {
                     events.push(crate::Event::UserEvent(t));
@@ -335,7 +343,7 @@ impl<T: 'static + Clone> Window<T> {
                         }
                     }
                 }
-                Event::WindowEvent { ref event, .. } => match event {
+                Event::WindowEvent { window_id, ref event } if window_id == self.window.id() => match event {
                     WindowEvent::Resized(physical_size) => {
                         self.gl.resize(*physical_size);
                     }
@@ -559,7 +567,7 @@ impl<T: 'static + Clone> Window<T> {
                 },
                 _ => (),
             }
-        });
+        }
     }
 
     ///
@@ -585,17 +593,6 @@ impl<T: 'static + Clone> Window<T> {
     ///
     pub fn gl(&self) -> Context {
         (*self.gl).clone()
-    }
-
-    ///
-    /// Returns an event loop proxy that can be used to send a `T` into the
-    /// render loop using the proxy's [`send_event`] method. The event can be
-    /// handled in the render loop by matching [`Event::UserEvent`].
-    ///
-    /// [`Event::UserEvent`]: crate::control::Event::UserEvent
-    /// [`send_event`]: winit::event_loop::EventLoopProxy::send_event
-    pub fn event_loop_proxy(&self) -> winit::event_loop::EventLoopProxy<T> {
-        self.event_loop.create_proxy()
     }
 }
 
