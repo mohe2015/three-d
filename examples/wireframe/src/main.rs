@@ -8,6 +8,11 @@ async fn main() {
     run().await;
 }
 
+#[cfg(target_arch = "wasm32")]
+fn main() {
+    unimplemented!()
+}
+
 pub async fn run() {
     let window = Window::new(WindowSettings {
         title: "Wireframe!".to_string(),

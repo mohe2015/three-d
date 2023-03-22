@@ -5,6 +5,11 @@ async fn main() {
     run().await;
 }
 
+#[cfg(target_arch = "wasm32")]
+fn main() {
+    unimplemented!()
+}
+
 use three_d::*;
 use winit::event_loop::EventLoop;
 

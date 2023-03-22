@@ -50,6 +50,11 @@ fn main() {
     run();
 }
 
+#[cfg(target_arch = "wasm32")]
+fn main() {
+    unimplemented!()
+}
+
 pub fn run() {
     let window = Window::new(WindowSettings {
         title: "Fireworks!".to_string(),
