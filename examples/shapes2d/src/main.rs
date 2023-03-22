@@ -1,4 +1,5 @@
 use three_d::*;
+use winit::event_loop::EventLoop;
 
 pub fn main() {
     let window = Window::new(WindowSettings {
@@ -39,7 +40,7 @@ pub fn main() {
         },
     );
 
-    window.render_loop(move |frame_input| {
+    window.render_loop(EventLoop::new(), move |frame_input| {
         for event in frame_input.events.iter() {
             if let Event::MousePress {
                 button,

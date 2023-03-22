@@ -1,4 +1,5 @@
 use three_d::*;
+use winit::event_loop::EventLoop;
 
 pub fn main() {
     // Create a window (a canvas on web)
@@ -47,7 +48,7 @@ pub fn main() {
     model.set_animation(|time| Mat4::from_angle_y(radians(time * 0.005)));
 
     // Start the main render loop
-    window.render_loop(
+    window.render_loop(EventLoop::new(), 
         move |frame_input| // Begin a new frame with an updated frame input
     {
         // Ensure the viewport matches the current window viewport which changes if the window is resized

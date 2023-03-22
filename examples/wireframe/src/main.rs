@@ -1,4 +1,5 @@
 use three_d::*;
+use winit::event_loop::EventLoop;
 
 // Entry point for non-wasm
 #[cfg(not(target_arch = "wasm32"))]
@@ -79,7 +80,7 @@ pub async fn run() {
     let directional1 = DirectionalLight::new(&context, 2.0, Color::WHITE, &vec3(1.0, 1.0, 1.0));
 
     // main loop
-    window.render_loop(move |mut frame_input| {
+    window.render_loop(EventLoop::new(), move |mut frame_input| {
         let mut redraw = frame_input.first_frame;
         redraw |= camera.set_viewport(frame_input.viewport);
         redraw |= control.handle_events(&mut camera, &mut frame_input.events);

@@ -1,4 +1,5 @@
 use three_d::*;
+use winit::event_loop::EventLoop;
 
 struct MandelbrotMaterial {}
 
@@ -66,7 +67,7 @@ pub fn main() {
     mesh.set_transformation(Mat4::from_scale(10.0));
 
     // main loop
-    window.render_loop(move |frame_input| {
+    window.render_loop(EventLoop::new(), move |frame_input| {
         let mut redraw = frame_input.first_frame;
         redraw |= camera.set_viewport(frame_input.viewport);
 

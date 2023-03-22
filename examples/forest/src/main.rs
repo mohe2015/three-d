@@ -6,6 +6,7 @@ async fn main() {
 }
 
 use three_d::*;
+use winit::event_loop::EventLoop;
 
 pub async fn run() {
     let window = Window::new(WindowSettings {
@@ -102,7 +103,7 @@ pub async fn run() {
     plane.material.render_states.cull = Cull::Back;
 
     // main loop
-    window.render_loop(move |mut frame_input| {
+    window.render_loop(EventLoop::new(), move |mut frame_input| {
         let mut redraw = frame_input.first_frame;
         redraw |= camera.set_viewport(frame_input.viewport);
 

@@ -6,6 +6,7 @@ async fn main() {
 }
 
 use three_d::*;
+use winit::event_loop::EventLoop;
 
 pub async fn run() {
     let window = Window::new(WindowSettings {
@@ -44,7 +45,7 @@ pub async fn run() {
     point_cloud.set_transformation(Mat4::from_translation(c));
 
     // main loop
-    window.render_loop(move |mut frame_input| {
+    window.render_loop(EventLoop::new(), move |mut frame_input| {
         let mut redraw = frame_input.first_frame;
         redraw |= camera.set_viewport(frame_input.viewport);
         redraw |= control.handle_events(&mut camera, &mut frame_input.events);

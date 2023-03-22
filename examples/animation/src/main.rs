@@ -6,6 +6,7 @@ async fn main() {
 }
 
 use three_d::*;
+use winit::event_loop::EventLoop;
 
 pub async fn run() {
     let window = Window::new(WindowSettings {
@@ -52,7 +53,7 @@ pub async fn run() {
     let light1 = DirectionalLight::new(&context, 1.0, Color::WHITE, &vec3(0.0, 0.5, 0.5));
 
     // main loop
-    window.render_loop(move |mut frame_input| {
+    window.render_loop(EventLoop::new(), move |mut frame_input| {
         camera.set_viewport(frame_input.viewport);
         control.handle_events(&mut camera, &mut frame_input.events);
 

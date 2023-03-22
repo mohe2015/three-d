@@ -6,6 +6,7 @@ async fn main() {
 }
 
 use three_d::*;
+use winit::event_loop::EventLoop;
 
 pub async fn run() {
     let window = Window::new(WindowSettings {
@@ -54,7 +55,7 @@ pub async fn run() {
         .for_each(|m| m.material.render_states.cull = Cull::Back);
 
     // main loop
-    window.render_loop(move |mut frame_input| {
+    window.render_loop(EventLoop::new(), move |mut frame_input| {
         let mut change = frame_input.first_frame;
         change |= camera.set_viewport(frame_input.viewport);
 

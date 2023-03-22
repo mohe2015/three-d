@@ -2,6 +2,7 @@ use rand::prelude::*;
 use three_d::core::*;
 use three_d::window::*;
 use three_d::*;
+use winit::event_loop::EventLoop;
 
 #[derive(Clone)]
 struct FireworksMaterial {
@@ -102,7 +103,7 @@ pub fn run() {
     // main loop
     let mut time = explosion_time + 100.0; // Ensure initialisation on the first loop.
     let mut color_index = 0;
-    window.render_loop(move |mut frame_input| {
+    window.render_loop(EventLoop::new(), move |mut frame_input| {
         camera.set_viewport(frame_input.viewport);
 
         control.handle_events(&mut camera, &mut frame_input.events);

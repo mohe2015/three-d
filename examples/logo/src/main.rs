@@ -6,6 +6,7 @@ async fn main() {
 }
 
 use three_d::*;
+use winit::event_loop::EventLoop;
 
 pub async fn run() {
     let window = Window::new(WindowSettings {
@@ -58,7 +59,7 @@ pub async fn run() {
     // Construct a model, with a default color material, thereby transferring the mesh data to the GPU
     let model = Gm::new(Mesh::new(&context, &cpu_mesh), ColorMaterial::default());
 
-    window.render_loop(move |frame_input| {
+    window.render_loop(EventLoop::new(), move |frame_input| {
         camera.set_viewport(frame_input.viewport);
 
         frame_input

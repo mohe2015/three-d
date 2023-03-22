@@ -1,4 +1,5 @@
 use three_d::*;
+use winit::event_loop::EventLoop;
 
 /*
     This example shows that for the InstancedMesh, instances are ordered by camera depth if the
@@ -125,7 +126,7 @@ pub fn main() {
     let light0 = DirectionalLight::new(&context, 1.0, Color::WHITE, &vec3(0.0, -0.5, -0.5));
     let ambient_light = three_d::renderer::light::AmbientLight::new(&context, 0.1, Color::WHITE);
 
-    window.render_loop(move |mut frame_input| {
+    window.render_loop(EventLoop::new(), move |mut frame_input| {
         camera.set_viewport(frame_input.viewport);
         control.handle_events(&mut camera, &mut frame_input.events);
 

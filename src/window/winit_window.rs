@@ -178,7 +178,6 @@ impl Window {
 
         Self::from_winit_window(
             winit_window,
-            event_loop,
             window_settings.surface_settings,
             window_settings.max_size.is_none(),
         )
@@ -189,9 +188,8 @@ impl Window {
     /// control over the creation of the window.
     /// This method takes ownership of the winit window and event loop, if this is not desired, use a [WindowedContext] or [HeadlessContext](crate::HeadlessContext) instead.
     ///
-    pub fn from_winit_window<T: 'static + Clone>(
+    pub fn from_winit_window(
         winit_window: window::Window,
-        event_loop: EventLoop<T>,
         mut surface_settings: SurfaceSettings,
         maximized: bool,
     ) -> Result<Self, WindowError> {
@@ -228,7 +226,7 @@ impl Window {
     ///
     /// Start the main render loop which calls the `callback` closure each frame.
     ///
-    pub fn render_loop<T: 'static + Clone, F: 'static + FnMut(FrameInput<T>) -> FrameOutput>(self, mut callback: F, event_loop: EventLoop<T>) {
+    pub fn render_loop<T: 'static + Clone, F: 'static + FnMut(FrameInput<T>) -> FrameOutput>(self, event_loop: EventLoop<T>, callback: F) {
         event_loop.run(self.get_render_loop_impl(callback))
     }
 
