@@ -8,12 +8,12 @@ pub fn main() {
 
     let event_loop = EventLoop::new();
     event_loop.run(move |event, target, control_flow| {
-        event_loop_1(event.clone(), target, control_flow);
-        event_loop_2(event, target, control_flow);
+        event_loop_1(&event, target, control_flow);
+        event_loop_2(&event, target, control_flow);
     })
 }
 
-fn create_window() -> impl FnMut(winit::event::Event<'_, ()>, &EventLoopWindowTarget<()>, &mut winit::event_loop::ControlFlow) {
+fn create_window() -> impl FnMut(&winit::event::Event<()>, &EventLoopWindowTarget<()>, &mut winit::event_loop::ControlFlow) {
     // Create a window (a canvas on web)
     let window = Window::new(WindowSettings {
         title: "Triangle!".to_string(),

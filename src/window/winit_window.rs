@@ -227,13 +227,15 @@ impl Window {
     /// Start the main render loop which calls the `callback` closure each frame.
     ///
     pub fn render_loop<T: 'static + Clone, F: 'static + FnMut(FrameInput<T>) -> FrameOutput>(self, event_loop: EventLoop<T>, callback: F) {
-        event_loop.run(self.get_render_loop_impl(callback))
+        event_loop.run(move |event, target, control_flow| {
+            self.get_render_loop_impl(callback)(&event, target, control_flow);
+        })
     }
 
     ///
     /// Start the main render loop which calls the `callback` closure each frame.
     ///
-    pub fn get_render_loop_impl<T: 'static + Clone, F: 'static + FnMut(FrameInput<T>) -> FrameOutput>(self, mut callback: F) -> impl FnMut(Event<'_, T>, &EventLoopWindowTarget<T>, &mut ControlFlow) {
+    pub fn get_render_loop_impl<T: 'static + Clone, F: 'static + FnMut(FrameInput<T>) -> FrameOutput>(self, mut callback: F) -> impl FnMut(&Event<'_, T>, &EventLoopWindowTarget<T>, &mut ControlFlow) {
         #[cfg(not(target_arch = "wasm32"))]
         let mut last_time = std::time::Instant::now();
         #[cfg(target_arch = "wasm32")]
@@ -257,7 +259,7 @@ impl Window {
         move |event, _, control_flow: &mut ControlFlow| {
             match event {
                 Event::UserEvent(t) => {
-                    events.push(crate::Event::UserEvent(t));
+                    events.push(crate::Event::UserEvent(t.clone()));
                 }
                 Event::LoopDestroyed => {
                     #[cfg(target_arch = "wasm32")]
@@ -314,7 +316,7 @@ impl Window {
                         .to_logical::<f64>(device_pixel_ratio)
                         .into();
                     let frame_input = FrameInput {
-                        events: events.drain(..).collect(),
+                        events: events.drain(..).map(|e| -> crate::renderer::control::Event<T> { todo!() }).collect(),
                         elapsed_time,
                         accumulated_time,
                         viewport: Viewport::new_at_origo(physical_width, physical_height),
@@ -341,7 +343,7 @@ impl Window {
                         }
                     }
                 }
-                Event::WindowEvent { window_id, ref event } if window_id == self.window.id() => match event {
+                Event::WindowEvent { window_id, ref event } if *window_id == self.window.id() => match event {
                     WindowEvent::Resized(physical_size) => {
                         self.gl.resize(*physical_size);
                     }
