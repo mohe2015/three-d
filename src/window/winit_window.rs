@@ -270,7 +270,7 @@ impl Window {
                 Event::MainEventsCleared => {
                     self.window.request_redraw();
                 }
-                Event::RedrawRequested(_) => {
+                Event::RedrawRequested(window_id) => if *window_id == self.window.id() {
                     #[cfg(not(target_arch = "wasm32"))]
                     let now = std::time::Instant::now();
                     #[cfg(target_arch = "wasm32")]
