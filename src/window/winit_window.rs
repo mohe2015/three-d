@@ -76,7 +76,7 @@ pub struct Window {
 impl Window {
     /// Exactly the same as [`Window::new()`] except with the ability to supply
     /// an existing [`EventLoop`]. Use the event loop's [proxy] to push custom
-    /// events into the render loop (from any thread). Not available for web.
+    /// events into the render loop (from any thread).
     ///
     /// [proxy]: winit::event_loop::EventLoopProxy
     #[cfg(not(target_arch = "wasm32"))]
@@ -115,7 +115,7 @@ impl Window {
 
     /// Exactly the same as [`Window::new()`] except with the ability to supply
     /// an existing [`EventLoop`]. Use the event loop's [proxy] to push custom
-    /// events into the render loop (from any thread). Not available for web.
+    /// events into the render loop (from any thread).
     ///
     /// [proxy]: winit::event_loop::EventLoopProxy
     #[cfg(target_arch = "wasm32")]

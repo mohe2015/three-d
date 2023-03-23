@@ -6,11 +6,11 @@ pub fn main() {
     let event_loop = EventLoop::new();
 
     let mut event_loop_1 = create_window(&event_loop);
-    let mut event_loop_2 = create_window(&event_loop);
+    //let mut event_loop_2 = create_window(&event_loop);
 
     event_loop.run(move |event, target, control_flow| {
         event_loop_1(&event, target, control_flow);
-        event_loop_2(&event, target, control_flow);
+        //event_loop_2(&event, target, control_flow);
     })
 }
 
