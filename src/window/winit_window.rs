@@ -74,15 +74,6 @@ pub struct Window {
 }
 
 impl Window {
-    ///
-    /// Constructs a new Window with the given [settings].
-    ///
-    ///
-    /// [settings]: WindowSettings
-    pub fn new(window_settings: WindowSettings) -> Result<Window, WindowError> {
-        Self::from_event_loop(window_settings, EventLoop::new())
-    }
-
     /// Exactly the same as [`Window::new()`] except with the ability to supply
     /// an existing [`EventLoop`]. Use the event loop's [proxy] to push custom
     /// events into the render loop (from any thread). Not available for web.
@@ -91,7 +82,7 @@ impl Window {
     #[cfg(not(target_arch = "wasm32"))]
     pub fn from_event_loop<T: 'static + Clone>(
         window_settings: WindowSettings,
-        event_loop: EventLoop<T>,
+        event_loop: &EventLoop<T>,
     ) -> Result<Self, WindowError> {
         let borderless = window_settings.borderless;
         let winit_window = if let Some((width, height)) = window_settings.max_size {
@@ -114,7 +105,7 @@ impl Window {
                 .with_decorations(!borderless)
                 .with_maximized(true)
         }
-        .build(&event_loop)?;
+        .build(event_loop)?;
         Self::from_winit_window(
             winit_window,
             window_settings.surface_settings,
@@ -130,7 +121,7 @@ impl Window {
     #[cfg(target_arch = "wasm32")]
     pub fn from_event_loop<T: 'static + Clone>(
         window_settings: WindowSettings,
-        event_loop: EventLoop<T>,
+        event_loop: &EventLoop<T>,
     ) -> Result<Self, WindowError> {
         use wasm_bindgen::JsCast;
         use winit::{dpi::LogicalSize, platform::web::WindowBuilderExtWebSys};
@@ -174,7 +165,7 @@ impl Window {
             .with_inner_size(inner_size)
             .with_prevent_default(true);
 
-        let winit_window = window_builder.build(&event_loop)?;
+        let winit_window = window_builder.build(event_loop)?;
 
         Self::from_winit_window(
             winit_window,

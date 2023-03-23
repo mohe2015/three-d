@@ -3,23 +3,24 @@ use winit::event_loop::EventLoop;
 use winit::event_loop::EventLoopWindowTarget;
 
 pub fn main() {
-    let mut event_loop_1 = create_window();
-    let mut event_loop_2 = create_window();
-
     let event_loop = EventLoop::new();
+
+    let mut event_loop_1 = create_window(&event_loop);
+    let mut event_loop_2 = create_window(&event_loop);
+
     event_loop.run(move |event, target, control_flow| {
         event_loop_1(&event, target, control_flow);
         event_loop_2(&event, target, control_flow);
     })
 }
 
-fn create_window() -> impl FnMut(&winit::event::Event<()>, &EventLoopWindowTarget<()>, &mut winit::event_loop::ControlFlow) {
+fn create_window<T: 'static + Clone>(event_loop: &EventLoop<T>) -> impl FnMut(&winit::event::Event<()>, &EventLoopWindowTarget<()>, &mut winit::event_loop::ControlFlow) {
     // Create a window (a canvas on web)
-    let window = Window::new(WindowSettings {
+    let window = Window::from_event_loop(WindowSettings {
         title: "Triangle!".to_string(),
         max_size: Some((1280, 720)),
         ..Default::default()
-    })
+    }, event_loop)
     .unwrap();
 
     // Get the graphics context from the window
