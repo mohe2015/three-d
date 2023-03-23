@@ -317,7 +317,7 @@ impl Window {
                         .to_logical::<f64>(device_pixel_ratio)
                         .into();
                     let frame_input = FrameInput {
-                        events: events.drain(..).map(|e| -> crate::renderer::control::Event<T> { todo!() }).collect(),
+                        events: events.drain(..).map(|e| e.clone()).collect(),
                         elapsed_time,
                         accumulated_time,
                         viewport: Viewport::new_at_origo(physical_width, physical_height),
