@@ -227,8 +227,9 @@ impl Window {
     /// Start the main render loop which calls the `callback` closure each frame.
     ///
     pub fn render_loop<T: 'static + Clone, F: 'static + FnMut(FrameInput<T>) -> FrameOutput>(self, event_loop: EventLoop<T>, callback: F) {
+        let mut internal_callback = self.get_render_loop_impl(callback);
         event_loop.run(move |event, target, control_flow| {
-            self.get_render_loop_impl(callback)(&event, target, control_flow);
+            internal_callback(&event, target, control_flow);
         })
     }
 
