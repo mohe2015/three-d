@@ -65,7 +65,7 @@ pub enum WindowError {
 /// Use [Window::new] to create a new window or [Window::from_winit_window] which provides full control over the creation of the window.
 ///
 pub struct Window {
-    window: winit::window::Window,
+    pub window: winit::window::Window,
     #[cfg(target_arch = "wasm32")]
     closure: wasm_bindgen::closure::Closure<dyn FnMut(web_sys::Event)>,
     gl: WindowedContext,
@@ -82,7 +82,7 @@ impl Window {
     #[cfg(not(target_arch = "wasm32"))]
     pub fn from_event_loop<T: 'static + Clone>(
         window_settings: WindowSettings,
-        event_loop: &EventLoop<T>,
+        event_loop: &EventLoopWindowTarget<T>,
     ) -> Result<Self, WindowError> {
         let borderless = window_settings.borderless;
         let winit_window = if let Some((width, height)) = window_settings.max_size {
@@ -121,7 +121,7 @@ impl Window {
     #[cfg(target_arch = "wasm32")]
     pub fn from_event_loop<T: 'static + Clone>(
         window_settings: WindowSettings,
-        event_loop: &EventLoop<T>,
+        event_loop: &EventLoopWindowTarget<T>,
     ) -> Result<Self, WindowError> {
         use wasm_bindgen::JsCast;
         use winit::{dpi::LogicalSize, platform::web::WindowBuilderExtWebSys};
@@ -217,17 +217,19 @@ impl Window {
     ///
     /// Start the main render loop which calls the `callback` closure each frame.
     ///
-    pub fn render_loop<T: 'static + Clone, F: 'static + FnMut(FrameInput<T>) -> FrameOutput>(self, event_loop: EventLoop<T>, callback: F) {
-        let mut internal_callback = self.get_render_loop_impl(callback);
-        event_loop.run(move |event, target, control_flow| {
-            internal_callback(&event, target, control_flow);
-        })
-    }
-
-    ///
-    /// Start the main render loop which calls the `callback` closure each frame.
-    ///
-    pub fn get_render_loop_impl<T: 'static + Clone, F: 'static + FnMut(FrameInput<T>) -> FrameOutput>(self, mut callback: F) -> impl FnMut(&Event<'_, T>, &EventLoopWindowTarget<T>, &mut ControlFlow) {
+    pub fn get_render_loop_impl<
+        T: 'static + Clone,
+        F: 'static
+            + FnMut(
+                FrameInput<T>,
+                &Event<T>,
+                &EventLoopWindowTarget<T>,
+                &mut ControlFlow,
+            ) -> FrameOutput,
+    >(
+        self,
+        mut callback: F,
+    ) -> impl FnMut(&Event<'_, T>, &EventLoopWindowTarget<T>, &mut ControlFlow) {
         #[cfg(not(target_arch = "wasm32"))]
         let mut last_time = std::time::Instant::now();
         #[cfg(target_arch = "wasm32")]
@@ -248,7 +250,7 @@ impl Window {
         // https://docs.rs/winit/latest/winit/event/enum.Event.html
         // https://github.com/rust-windowing/winit/blob/master/examples/multiwindow.rs
 
-        move |event, _, control_flow: &mut ControlFlow| {
+        move |event, event_loop, control_flow: &mut ControlFlow| {
             match event {
                 Event::UserEvent(t) => {
                     events.push(crate::Event::UserEvent(t.clone()));
@@ -270,72 +272,77 @@ impl Window {
                 Event::MainEventsCleared => {
                     self.window.request_redraw();
                 }
-                Event::RedrawRequested(window_id) => if *window_id == self.window.id() {
-                    #[cfg(not(target_arch = "wasm32"))]
-                    let now = std::time::Instant::now();
-                    #[cfg(target_arch = "wasm32")]
-                    let now = instant::Instant::now();
+                Event::RedrawRequested(window_id) => {
+                    if *window_id == self.window.id() {
+                        #[cfg(not(target_arch = "wasm32"))]
+                        let now = std::time::Instant::now();
+                        #[cfg(target_arch = "wasm32")]
+                        let now = instant::Instant::now();
 
-                    let duration = now.duration_since(last_time);
-                    last_time = now;
-                    let elapsed_time =
-                        duration.as_secs() as f64 * 1000.0 + duration.subsec_nanos() as f64 * 1e-6;
-                    accumulated_time += elapsed_time;
+                        let duration = now.duration_since(last_time);
+                        last_time = now;
+                        let elapsed_time = duration.as_secs() as f64 * 1000.0
+                            + duration.subsec_nanos() as f64 * 1e-6;
+                        accumulated_time += elapsed_time;
 
-                    #[cfg(target_arch = "wasm32")]
-                    if self.maximized {
-                        use winit::platform::web::WindowExtWebSys;
+                        #[cfg(target_arch = "wasm32")]
+                        if self.maximized {
+                            use winit::platform::web::WindowExtWebSys;
 
-                        let html_canvas = self.window.canvas();
-                        let browser_window = html_canvas
-                            .owner_document()
-                            .and_then(|doc| doc.default_view())
-                            .or_else(web_sys::window)
-                            .unwrap();
+                            let html_canvas = self.window.canvas();
+                            let browser_window = html_canvas
+                                .owner_document()
+                                .and_then(|doc| doc.default_view())
+                                .or_else(web_sys::window)
+                                .unwrap();
 
-                        self.window.set_inner_size(dpi::LogicalSize {
-                            width: browser_window.inner_width().unwrap().as_f64().unwrap(),
-                            height: browser_window.inner_height().unwrap().as_f64().unwrap(),
-                        });
-                    }
-
-                    let (physical_width, physical_height): (u32, u32) =
-                        self.window.inner_size().into();
-                    let device_pixel_ratio = self.window.scale_factor();
-                    let (width, height): (u32, u32) = self
-                        .window
-                        .inner_size()
-                        .to_logical::<f64>(device_pixel_ratio)
-                        .into();
-                    let frame_input = FrameInput {
-                        events: events.drain(..).map(|e| e.clone()).collect(),
-                        elapsed_time,
-                        accumulated_time,
-                        viewport: Viewport::new_at_origo(physical_width, physical_height),
-                        window_width: width,
-                        window_height: height,
-                        device_pixel_ratio,
-                        first_frame,
-                        context: self.gl.clone(),
-                    };
-                    first_frame = false;
-                    let frame_output = callback(frame_input);
-                    if frame_output.exit {
-                        *control_flow = ControlFlow::Exit;
-                    } else {
-                        if frame_output.swap_buffers {
-                            #[cfg(not(target_arch = "wasm32"))]
-                            self.gl.swap_buffers().unwrap();
+                            self.window.set_inner_size(dpi::LogicalSize {
+                                width: browser_window.inner_width().unwrap().as_f64().unwrap(),
+                                height: browser_window.inner_height().unwrap().as_f64().unwrap(),
+                            });
                         }
-                        if frame_output.wait_next_event {
-                            *control_flow = ControlFlow::Wait;
+
+                        let (physical_width, physical_height): (u32, u32) =
+                            self.window.inner_size().into();
+                        let device_pixel_ratio = self.window.scale_factor();
+                        let (width, height): (u32, u32) = self
+                            .window
+                            .inner_size()
+                            .to_logical::<f64>(device_pixel_ratio)
+                            .into();
+                        let frame_input = FrameInput {
+                            events: events.drain(..).map(|e| e.clone()).collect(),
+                            elapsed_time,
+                            accumulated_time,
+                            viewport: Viewport::new_at_origo(physical_width, physical_height),
+                            window_width: width,
+                            window_height: height,
+                            device_pixel_ratio,
+                            first_frame,
+                            context: self.gl.clone(),
+                        };
+                        first_frame = false;
+                        let frame_output = callback(frame_input, event, event_loop, control_flow);
+                        if frame_output.exit {
+                            *control_flow = ControlFlow::Exit;
                         } else {
-                            *control_flow = ControlFlow::Poll;
-                            self.window.request_redraw();
+                            if frame_output.swap_buffers {
+                                #[cfg(not(target_arch = "wasm32"))]
+                                self.gl.swap_buffers().unwrap();
+                            }
+                            if frame_output.wait_next_event {
+                                *control_flow = ControlFlow::Wait;
+                            } else {
+                                *control_flow = ControlFlow::Poll;
+                                self.window.request_redraw();
+                            }
                         }
                     }
                 }
-                Event::WindowEvent { window_id, ref event } if *window_id == self.window.id() => match event {
+                Event::WindowEvent {
+                    window_id,
+                    ref event,
+                } if *window_id == self.window.id() => match event {
                     WindowEvent::Resized(physical_size) => {
                         self.gl.resize(*physical_size);
                     }
