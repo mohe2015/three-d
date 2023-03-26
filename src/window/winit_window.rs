@@ -120,6 +120,7 @@ impl Window {
     /// [proxy]: winit::event_loop::EventLoopProxy
     #[cfg(target_arch = "wasm32")]
     pub fn from_event_loop<T: 'static + Clone>(
+        // TODO FIXME don't force T to be cloneable by adding a trait that allows not passing the whole UserEvent down
         window_settings: WindowSettings,
         event_loop: &EventLoopWindowTarget<T>,
     ) -> Result<Self, WindowError> {
@@ -310,7 +311,7 @@ impl Window {
                             .inner_size()
                             .to_logical::<f64>(device_pixel_ratio)
                             .into();
-                        let frame_input = FrameInput {
+                        let frame_input: FrameInput<T> = FrameInput {
                             events: events.drain(..).map(|e| e.clone()).collect(),
                             elapsed_time,
                             accumulated_time,
